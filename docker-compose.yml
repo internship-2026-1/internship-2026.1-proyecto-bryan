@@ -18,12 +18,14 @@ services:
       context: ./services/users
     container_name: ip_users
     command: python manage.py runserver 0.0.0.0:8000
-    # volumes:
-    #   - ./services/users:/app
+    volumes: # MONTAR VOLUMENES para desarrollo - permite ver cambios en tiempo real
+      - ./services/users:/app # SIN volumenes: usa imagen Docker (codigo "congelado"). CON volumenes: usa archivos locales
     env_file:
       - .env
     ports:
       - "8000:8000"
+    # expose:
+    #   - "8000"
     # depends_on:
     #   - db
     networks:
