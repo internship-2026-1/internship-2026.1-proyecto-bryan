@@ -11,8 +11,7 @@ WORKDIR /app
 
 # Instalar dependencias de sistema requeridas
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+    postgresql-client \    # (multi-db) Cliente de MongoDB para healthcheck    && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
 COPY requirements.txt /app/

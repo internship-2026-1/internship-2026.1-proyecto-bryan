@@ -3,7 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# (c) Configuración segura desde variables de entorno
+# Configuración segura desde variables de entorno
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-core-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = ["*"]
@@ -50,7 +50,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# (c) Configuración de Base de Datos PostgreSQL
+# Configuración de Base de Datos PostgreSQL (Transacciones y Pedidos)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -59,8 +59,21 @@ DATABASES = {
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
         "HOST": os.environ.get("POSTGRES_HOST", "core_db"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-    }
+    },
+    # MongoDB para Catalogo de Productos
+    "mongodb": {
+        "ENGINE": "djongo",
+        "NAME": os.environ.get("MONGO_DB_NAME", "core_catalog"),
+        "ENFORCE_SCHEMA_STRUCTURE": False,
+        "CLIENT": {
+            "host": os.environ.get("MONGO_HOST", "mongodb"),
+            "port": int(os.environ.get("MONGO_PORT", 27017)),
+        },
+    },
 }
+
+# Router para enrutar modelos a bases de datos específicas
+DATABASE_ROUTERS = ["config.db_routers.CoreRouter"]
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -85,7 +98,7 @@ USE_TZ = True
 STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# (c) Configuración REST Framework
+# Configuración REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }

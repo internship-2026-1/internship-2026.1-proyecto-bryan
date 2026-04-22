@@ -129,6 +129,26 @@ services:
     networks:
       - ip_network
 
+  # (multi-db) MongoDB para Catálogo de Productos
+  mongodb:
+    image: mongo:6.0-alpine
+    container_name: ip_mongodb
+    env_file:
+      - .env
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-core_catalog}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ip_network
+
 networks:
   ip_network:
     driver: bridge
@@ -139,3 +159,5 @@ volumes:
   pgadmin_data:
   # Volume para base de datos del Core Service
   core_db_data:
+  # (multi-db) Volume para MongoDB
+  mongodb_data:
