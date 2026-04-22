@@ -13,9 +13,10 @@ class HealthCheckView(APIView):
         """GET /api/v1/health/ - Retorna el estado del servicio"""
         return Response(
             {
-                "status": "healthy",
-                "message": "Core service is running (desde Django)",
-                "service": "core-service",
+                "success": True,
+                "message": "Core service healthy.",
+                "data": {"service": "core", "health": "ok"},
+                "status": 200,
             },
             status=status.HTTP_200_OK,
         )
