@@ -17,7 +17,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
-    "api",
+    "mongoengine",  # MongoEngine para ODM de MongoDB
+    "inventory",  # Inventario de productos (MongoDB) - conecta MongoDB en apps.py
+    "sales",  # Órdenes y ventas (PostgreSQL)
 ]
 
 MIDDLEWARE = [
@@ -50,30 +52,41 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Configuración de Base de Datos PostgreSQL (Transacciones y Pedidos)
+# ============================================================================
+# BASES DE DATOS - Arquitectura Multi-DB sin Router
+# ============================================================================
+
+# PostgreSQL (Django ORM) - Para admin, auth, sales y logs
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "core_db"),
-        "USER": os.environ.get("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "postgres"),
-        "HOST": os.environ.get("POSTGRES_HOST", "core_db"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
-    },
-    # MongoDB para Catalogo de Productos
-    "mongodb": {
-        "ENGINE": "djongo",
-        "NAME": os.environ.get("MONGO_DB_NAME", "core_catalog"),
-        "ENFORCE_SCHEMA_STRUCTURE": False,
-        "CLIENT": {
-            "host": os.environ.get("MONGO_HOST", "mongodb"),
-            "port": int(os.environ.get("MONGO_PORT", 27017)),
-        },
+        "NAME": os.environ.get("CORE_POSTGRES_DB", "core_db"),
+        "USER": os.environ.get("CORE_POSTGRES_USER", "core_user"),
+        "PASSWORD": os.environ.get("CORE_POSTGRES_PASSWORD", "core_pass"),
+        "HOST": os.environ.get("CORE_POSTGRES_HOST", "db-core-pg"),
+        "PORT": os.environ.get("CORE_POSTGRES_PORT", "5432"),
     },
 }
 
-# Router para enrutar modelos a bases de datos específicas
-DATABASE_ROUTERS = ["config.db_routers.CoreRouter"]
+# MongoDB (MongoEngine ODM) - Para app inventory. Conexión inicializada en inventory/apps.py
+
+# ============================================================================
+# CELERY - Tareas asíncronas (broker: Redis)
+# ============================================================================
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+
+# ============================================================================
+# ODOO - Integración XML-RPC
+# ============================================================================
+ODOO_URL = os.environ.get("ODOO_URL", "http://odoo:8069")
+ODOO_DB = os.environ.get("ODOO_DB", "odoo")
+ODOO_USER = os.environ.get("ODOO_USER", "admin")
+ODOO_PASSWORD = os.environ.get("ODOO_PASSWORD", "admin")
 
 AUTH_PASSWORD_VALIDATORS = [
     {

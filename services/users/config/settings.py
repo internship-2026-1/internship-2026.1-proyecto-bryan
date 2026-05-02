@@ -29,7 +29,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "core.urls"
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
@@ -47,39 +47,27 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "core.wsgi.application"
-DB_ENGINE = os.environ.get(
-    "USERS_DB_ENGINE", os.environ.get("DB_ENGINE", "sqlite")
-).lower()
+WSGI_APPLICATION = "config.wsgi.application"
+DB_ENGINE = os.environ.get("DB_ENGINE", "postgresql").lower()
 
-if DB_ENGINE == "postgresql":
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": os.environ.get(
-                "USERS_DB_NAME", os.environ.get("POSTGRES_DB", "users_db")
-            ),
-            "USER": os.environ.get(
-                "USERS_DB_USER", os.environ.get("POSTGRES_USER", "users_user")
-            ),
-            "PASSWORD": os.environ.get(
-                "USERS_DB_PASSWORD", os.environ.get("POSTGRES_PASSWORD", "users_pass")
-            ),
-            "HOST": os.environ.get(
-                "USERS_DB_HOST", os.environ.get("POSTGRES_HOST", "users_db")
-            ),
-            "PORT": os.environ.get(
-                "USERS_DB_PORT", os.environ.get("POSTGRES_PORT", "5432")
-            ),
-        }
+# if DB_ENGINE == "postgresql":
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("USERS_POSTGRES_DB", "users_db"),
+        "USER": os.environ.get("USERS_POSTGRES_USER", "users_user"),
+        "PASSWORD": os.environ.get("USERS_POSTGRES_PASSWORD", "users_pass"),
+        "HOST": os.environ.get("USERS_POSTGRES_HOST", "db-users-pg"),
+        "PORT": os.environ.get("USERS_POSTGRES_PORT", "5432"),
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
+# else:
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = [
     {

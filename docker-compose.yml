@@ -1,33 +1,33 @@
 version: "3.9"
 
 services:
-  getaway:
+  gateway:
     image: nginx:1.25-alpine
-    container_name: ip_getaway
+    container_name: prj-gateway
     ports:
       - "8080:80"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro,Z
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
     labels:
-      - "ip_getaway.version=1.0"
+      - "gateway.version=1.0"
     # Dependencias agregadas para core-service
     depends_on:
-      - users
-      - core-service
+      - svc-users
+      - svc-core
     networks:
-      - ip_network
+      - project-net
 
-  users:
+  svc-users:
     build:
       context: ./services/users
-    container_name: ip_users
+    container_name: prj-svc-users
     command: python manage.py runserver 0.0.0.0:8000
     volumes: # MONTAR VOLUMENES para desarrollo - permite ver cambios en tiempo real
       - ./services/users:/app # SIN volumenes: usa imagen Docker (codigo "congelado"). CON volumenes: usa archivos locales
     env_file:
       - .env
     depends_on:
-      users_db:
+      db-users-pg:
         condition: service_healthy
     ports:
       - "8000:8000"
@@ -36,34 +36,34 @@ services:
     # depends_on:
     #   - db
     networks:
-      - ip_network
+      - project-net
 
-  users_db:
+  db-users-pg:
     image: postgres:15-alpine
-    container_name: users_db
+    container_name: prj-db-users
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${USERS_POSTGRES_DB}
+      POSTGRES_USER: ${USERS_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${USERS_POSTGRES_PASSWORD}
     volumes: # Attached-Volumes
-      - users_db_data:/var/lib/postgresql/data
+      - data-users-db:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost || exit 1",
+          "pg_isready -U ${USERS_POSTGRES_USER} -d ${USERS_POSTGRES_DB} -h localhost || exit 1",
         ]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - ip_network
+      - project-net
 
-  pgadmin:
+  admin-pgadmin:
     image: dpage/pgadmin4:8.5
-    container_name: ip_pgadmin
+    container_name: prj-admin-pgadmin
     env_file:
       - .env
     environment:
@@ -73,91 +73,138 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      users_db:
+      db-users-pg:
         condition: service_healthy
     volumes: # Bind Mounts
-      - pgadmin_data:/var/lib/pgadmin
+      - data-pgadmin:/var/lib/pgadmin
     networks:
-      - ip_network
+      - project-net
+
+  admin-mongo:
+    image: mongo-express:latest
+    container_name: prj-admin-mongo
+    restart: always
+    env_file:
+      - .env
+    environment:
+      ME_CONFIG_MONGODB_SERVER: db-core-mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: "true"
+      ME_CONFIG_BASICAUTH_USERNAME: ${ADMIN_MONGO_USER}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ADMIN_MONGO_PASS}
+    ports:
+      - "8081:8081"
+    depends_on:
+      db-core-mongo:
+        condition: service_healthy
+    networks:
+      - project-net
 
   # Core Service - Servicio independiente
-  core-service:
+  svc-core:
     build:
       context: ./services/core
-    container_name: ip_core_service
+    container_name: prj-svc-core
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./services/core:/app
     env_file:
       - .env
-    environment:
-      # Variables para Django
-      DJANGO_SETTINGS_MODULE: config.settings
-      POSTGRES_DB: ${CORE_POSTGRES_DB:-core_db}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: core_db
-      DJANGO_DEBUG: ${DJANGO_DEBUG:-1}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-core-key}
     depends_on:
-      core_db:
+      db-core-pg:
+        condition: service_healthy
+      db-core-mongo:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
-      - ip_network
+      - project-net
+
+  # Celery Worker - Procesa tareas asíncronas (sync con Odoo)
+  svc-core-worker:
+    build:
+      context: ./services/core
+    container_name: prj-svc-core-worker
+    command: celery -A config worker --loglevel=info --concurrency=2
+    volumes:
+      - ./services/core:/app
+    env_file:
+      - .env
+    depends_on:
+      db-core-pg:
+        condition: service_healthy
+      db-core-mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - project-net
+
+  # Redis - Broker para Celery
+  redis:
+    image: redis:7-alpine
+    container_name: prj-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - project-net
 
   # PostgreSQL para Core Service
-  core_db:
+  db-core-pg:
     image: postgres:15-alpine
-    container_name: core_db
+    container_name: prj-db-core
     env_file:
       - .env
     environment:
-      POSTGRES_DB: ${CORE_POSTGRES_DB:-core_db}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${CORE_POSTGRES_DB}
+      POSTGRES_USER: ${CORE_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${CORE_POSTGRES_PASSWORD}
     volumes:
-      - core_db_data:/var/lib/postgresql/data
+      - data-core-pg:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER} -d ${CORE_POSTGRES_DB:-core_db} -h localhost || exit 1",
+          "pg_isready -U ${CORE_POSTGRES_USER} -d ${CORE_POSTGRES_DB} -h localhost || exit 1",
         ]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - ip_network
+      - project-net
 
-  # (multi-db) MongoDB para Catálogo de Productos
-  mongodb:
-    image: mongo:6.0-alpine
-    container_name: ip_mongodb
+  # MongoDB para Catálogo de Productos
+  db-core-mongo:
+    image: mongo:7.0
+    container_name: prj-db-core-mongo
     env_file:
       - .env
     environment:
-      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-core_catalog}
+      MONGO_INITDB_DATABASE: ${CORE_MONGO_DB_NAME:-core_catalog}
     ports:
       - "27017:27017"
     volumes:
-      - mongodb_data:/data/db
+      - data-core-mongo:/data/db
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 3s
       retries: 5
     networks:
-      - ip_network
+      - project-net
 
 networks:
-  ip_network:
+  project-net:
     driver: bridge
 
 # Named Volumes
 volumes:
-  users_db_data:
-  pgadmin_data:
-  # Volume para base de datos del Core Service
-  core_db_data:
-  # (multi-db) Volume para MongoDB
-  mongodb_data:
+  data-users-db:
+  data-pgadmin:
+  data-core-pg:
+  data-core-mongo:
