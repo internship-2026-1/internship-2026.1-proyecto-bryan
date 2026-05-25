@@ -36,13 +36,15 @@ class ProductSerializer(serializers.Serializer):
 
 
 class ProductAssignCatalogSerializer(serializers.Serializer):
-    """PUT /api/v1/inventory/products/{id}/ — asignar catálogo y/o estado."""
+    """PUT /api/v1/inventory/products/{id}/ — asignar catálogo, estado, precio y stock."""
 
     catalog = serializers.CharField(required=False, allow_null=True)
     status = serializers.ChoiceField(
         choices=["active", "inactive", "out_of_stock", "discontinued"],
         required=False,
     )
+    price = serializers.FloatField(required=False)
+    stock = serializers.IntegerField(required=False)
 
 
 class EnrichProductSerializer(serializers.Serializer):

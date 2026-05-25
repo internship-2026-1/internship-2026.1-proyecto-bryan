@@ -3,22 +3,21 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 import re
 from .models import User
-from django.contrib.auth import authenticate  # (login) Para autenticar credenciales
-from rest_framework_simplejwt.tokens import RefreshToken  # (login) Para generar JWT
+from django.contrib.auth import authenticate  # Para autenticar credenciales
+from rest_framework_simplejwt.tokens import RefreshToken  # Para generar JWT
 
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     """
     Serializer para el registro de usuarios con validaciones completas.
     Incluye: validación de contraseña, email único, username único, teléfono válido.
-    req2: Ahora incluye el campo 'role' con valor por defecto 'b2c'
     """
 
     # Campo write_only para que la contraseña no se retorne en respuesta;
     password = serializers.CharField(write_only=True, required=True)
     phone = serializers.CharField(required=True, allow_blank=False)
     created_at = serializers.SerializerMethodField()
-    # req2: Agregar campo role con valores permitidos, default 'b2c' si no se envía
+    # Agregar campo role con valores permitidos, default 'b2c' si no se envía
     role = serializers.ChoiceField(
         choices=["b2c", "b2b", "admin"], required=False, default="b2c"
     )
@@ -136,10 +135,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         - Usa UserManager.create_user que hashea la contraseña con PBKDF2
         - NO se retorna la contraseña en la respuesta (write_only=True)
         - Usuario creado con is_active=True (sin verificación por email)
-        req2: Asigna rol al usuario (por defecto 'b2c' si no se proporciona)
         """
         password = validated_data.pop("password")
-        # req2: Usar el rol del usuario (default 'b2c' si no se proporciona)
+        # Usar el rol del usuario (default 'b2c' si no se proporciona)
         role = validated_data.get("role", "b2c")
         user = User.objects.create_user(
             username=validated_data["username"],
@@ -148,63 +146,63 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
             phone=validated_data.get("phone", ""),
-            role=role,  # req2: Asignar role al usuario
-            is_active=True,  # MODIF: Usuario activo por defecto (sin verificación)
+            role=role,  
+            is_active=True,  # Usuario activo por defecto (sin verificación)
         )
         return user
 
 
 class UserLoginSerializer(serializers.Serializer):
     """
-    # (login) Serializer para autenticación de usuarios
-    # (login) Valida credenciales y genera tokens JWT (access + refresh)
-    # (login) Retorna: {"access": "token", "refresh": "token"}
+    Serializer para autenticación de usuarios
+    Valida credenciales y genera tokens JWT (access + refresh)
+    Retorna: {"access": "token", "refresh": "token"}
     """
 
-    # (login) Campo username para identificar usuario
+    # Campo username para identificar usuario
     username = serializers.CharField(required=True)
-    # (login) Campo password para validar credenciales
+    # Campo password para validar credenciales
     password = serializers.CharField(write_only=True, required=True)
 
     def validate(self, data):
         """
-        # (login) Valida credenciales contra la base de datos
-        # (login) Retorna 401 si no son válidas
+        Valida credenciales contra la base de datos
+        Retorna 401 si no son válidas
         """
         username = data.get("username")
         password = data.get("password")
 
-        # (login) Autentica usando Django authenticate
+        # Autentica usando Django authenticate
         user = authenticate(username=username, password=password)
 
         if not user:
-            # (login) Credenciales inválidas - retorna error 401
+            # Credenciales inválidas - retorna error 401
             raise serializers.ValidationError(
                 "Credenciales inválidas. Verifica el usuario o contraseña."
             )
 
-        # (login) Genera tokens JWT (access y refresh)
+        # Genera tokens JWT (access y refresh)
         refresh = RefreshToken.for_user(user)
-        data["access"] = str(refresh.access_token)  # (login) Token de acceso
-        data["refresh"] = str(refresh)  # (login) Token de refresh
+        data["access"] = str(refresh.access_token)  # Token de acceso
+        data["refresh"] = str(refresh)  # Token de refresh
         data["user"] = user
 
         return data
 
 
-# (update) Serializer para actualización parcial del perfil de usuario
-class UserProfileUpdateSerializer(serializers.ModelSerializer):  # (update)
+# Serializer para actualización parcial del perfil de usuario
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """
-    # (update) Serializer para actualizar perfil de usuario autenticado.
-    # (update) email y username son de solo lectura por seguridad.
-    # (update) Permite actualizar: first_name, last_name, phone, address, country.
+    Serializer para actualizar perfil de usuario autenticado.
+    email y username son de solo lectura por seguridad.
+    Permite actualizar: first_name, last_name, phone, address, country.
     """
 
-    created_at = serializers.SerializerMethodField()  # (update)
+    created_at = serializers.SerializerMethodField()
 
-    class Meta:  # (update)
-        model = User  # (update)
-        fields = [  # (update)
+    class Meta:
+        model = User
+        fields = [
             "id",
             "username",
             "email",
@@ -216,7 +214,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):  # (update)
             "country",
             "created_at",
         ]
-        read_only_fields = [  # (update) Campos que no se pueden modificar
+        read_only_fields = [  # Campos que no se pueden modificar
             "id",
             "username",
             "email",
@@ -224,45 +222,45 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):  # (update)
             "created_at",
         ]
 
-    def get_created_at(self, obj):  # (update)
-        return obj.date_joined.isoformat()  # (update)
+    def get_created_at(self, obj):
+        return obj.date_joined.isoformat()
 
 
-# (reset) Serializer para solicitar restablecimiento de contraseña
-class PasswordResetRequestSerializer(serializers.Serializer):  # (reset)
-    """# (reset) Valida el email para solicitar reset de contraseña."""
+# Serializer para solicitar restablecimiento de contraseña
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """# Valida el email para solicitar reset de contraseña."""
 
-    email = serializers.EmailField(required=True)  # (reset)
+    email = serializers.EmailField(required=True)
 
 
-# (reset) Serializer para confirmar el cambio de contraseña con token
-class PasswordResetConfirmSerializer(serializers.Serializer):  # (reset)
-    """# (reset) Valida el token y la nueva contraseña."""
+# Serializer para confirmar el cambio de contraseña con token
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """# Valida el token y la nueva contraseña."""
 
-    token = serializers.CharField(required=True)  # (reset)
-    new_password = serializers.CharField(required=True, write_only=True)  # (reset)
+    token = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, write_only=True)
 
-    def validate_new_password(self, value):  # (reset)
-        """# (reset) Aplica las mismas reglas de contraseña que el registro."""
-        try:  # (reset)
-            validate_password(value)  # (reset)
-        except ValidationError as e:  # (reset)
-            raise serializers.ValidationError(str(e))  # (reset)
+    def validate_new_password(self, value):
+        """# Aplica las mismas reglas de contraseña que el registro."""
+        try:
+            validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e))
 
-        if len(value) < 8:  # (reset)
-            raise serializers.ValidationError(  # (reset)
-                "La contraseña debe tener al menos 8 caracteres."  # (reset)
+        if len(value) < 8:
+            raise serializers.ValidationError(
+                "La contraseña debe tener al menos 8 caracteres."
             )
-        if not any(char.isupper() for char in value):  # (reset)
-            raise serializers.ValidationError(  # (reset)
-                "La contraseña debe contener al menos una mayúscula."  # (reset)
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError(
+                "La contraseña debe contener al menos una mayúscula."
             )
-        if not any(char.isdigit() for char in value):  # (reset)
-            raise serializers.ValidationError(  # (reset)
-                "La contraseña debe contener al menos un número."  # (reset)
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError(
+                "La contraseña debe contener al menos un número."
             )
-        if not any(char in "!@#$%^&*()_+-=[]{}|;:,.<>?" for char in value):  # (reset)
-            raise serializers.ValidationError(  # (reset)
-                "La contraseña debe contener al menos un carácter especial."  # (reset)
+        if not any(char in "!@#$%^&*()_+-=[]{}|;:,.<>?" for char in value):
+            raise serializers.ValidationError(
+                "La contraseña debe contener al menos un carácter especial."
             )
-        return value  # (reset)
+        return value

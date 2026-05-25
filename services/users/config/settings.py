@@ -15,7 +15,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
-    "drf_spectacular",
     "apps",
 ]
 
@@ -115,40 +114,12 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=7
     ),  # (login) Token de refresh válido por 7 días
-    "ALGORITHM": "HS256",  # (login) Algoritmo de firma JWT
-    "SIGNING_KEY": SECRET_KEY,  # (login) Clave para firmar tokens
+    "ALGORITHM": "HS256",  # Algoritmo de firma JWT
+    "SIGNING_KEY": SECRET_KEY,  # Clave para firmar tokens
 }
 
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Users Service API",
-    "DESCRIPTION": "API documentation for users microservice",
-    "VERSION": "1.0.0",
-    "SERVERS": [
-        {
-            "url": "/user/api/v1",
-            "description": "Gateway base URL",
-        }
-    ],
-    "POSTPROCESSING_HOOKS": [
-        "drf_spectacular.hooks.postprocess_schema_enums",
-        "core.schema.inject_gateway_servers",
-    ],
-    "SECURITY": [{"BearerAuth": []}],
-    "COMPONENTS": {
-        "securitySchemes": {
-            "BearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": "Agregar el token en el header Authorization: Bearer <token>",
-            }
-        }
-    },
-    "SWAGGER_UI_SETTINGS": {
-        "persistAuthorization": True,
-        "displayRequestDuration": True,
-    },
-}
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 AUTH_USER_MODEL = "apps.User"
 

@@ -31,18 +31,20 @@ def _serialize_catalog(c):
 
 def _serialize_product(p):
     catalog_name = None
+    catalog_id = None
     try:
         if p.catalog:
             catalog_name = p.catalog.name
+            catalog_id = str(p.catalog.id)
     except Exception:
         # El catálogo referenciado fue eliminado — limpiar la referencia huérfana
         p.catalog = None
         p.save()
-        catalog_name = None
 
     return {
         "id": str(p.id),
         "catalog": catalog_name,
+        "catalog_id": catalog_id,
         "name": p.name,
         "sku": p.sku,
         "price": str(round(p.price, 2)) if p.price is not None else "0.00",
@@ -177,6 +179,12 @@ class ProductDetailView(APIView):
         # Asignar status
         if "status" in data:
             product.status = data["status"]
+
+        # Actualizar precio y stock
+        if "price" in data:
+            product.price = data["price"]
+        if "stock" in data:
+            product.stock = data["stock"]
 
         product.save()
         return Response(_serialize_product(product))

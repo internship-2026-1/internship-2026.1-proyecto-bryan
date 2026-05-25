@@ -4,10 +4,10 @@ from django.contrib.auth.models import (
     BaseUserManager,
 )
 from django.db import models
-import uuid  # req1: Importar UUID para IDs de usuarios
-import secrets  # (reset) Para generar tokens seguros
-from django.utils import timezone  # (reset) Para manejar expiración de tokens
-from datetime import timedelta  # (reset) Para calcular tiempo de expiración
+import uuid  
+import secrets  
+from django.utils import timezone  
+from datetime import timedelta  
 
 
 class UserManager(BaseUserManager):
@@ -55,7 +55,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         (is_superuser, groups, user_permissions)
     """
 
-    # req1: Cambiar ID por defecto a UUID
+    # Cambiar ID por defecto a UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=30, unique=True)
     email = models.EmailField(unique=True)
@@ -65,9 +65,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Control de estado del usuario
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    # MODIF: date_joined automático para auditoría - se retorna como created_at en serializer
+    # date_joined automático para auditoría - se retorna como created_at en serializer
     date_joined = models.DateTimeField(auto_now_add=True)
-    # req2: Rol del usuario con valor por defecto 'b2c' (Business to Consumer)
+    # Rol del usuario con valor por defecto 'b2c' (Business to Consumer)
     ROLE_CHOICES = [
         ("b2c", "Business to Consumer"),
         ("b2b", "Business to Business"),
@@ -79,45 +79,45 @@ class User(AbstractBaseUser, PermissionsMixin):
     country = models.CharField(max_length=50, blank=True)
     objects = UserManager()
 
-    # MODIF: USERNAME_FIELD cambiado de "email" a "username" para autenticación
+    # USERNAME_FIELD cambiado de "email" a "username" para autenticación
     USERNAME_FIELD = "username"
-    # MODIF: REQUIRED_FIELDS actualizado para create_superuser
+    # REQUIRED_FIELDS actualizado para create_superuser
     REQUIRED_FIELDS = ["email", "first_name", "last_name"]
 
     def __str__(self):
         return self.email
 
 
-# (reset) Modelo para almacenar tokens de restablecimiento de contraseña
-class PasswordResetToken(models.Model):  # (reset)
+# Modelo para almacenar tokens de restablecimiento de contraseña
+class PasswordResetToken(models.Model):  
     """
-    # (reset) Almacena tokens temporales para reset de contraseña.
-    # (reset) Cada token tiene expiración de 1 hora y uso único.
+    # Almacena tokens temporales para reset de contraseña.
+    # Cada token tiene expiración de 1 hora y uso único.
     """
 
-    user = models.ForeignKey(  # (reset)
-        User, on_delete=models.CASCADE, related_name="password_reset_tokens"  # (reset)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="password_reset_tokens"
     )
-    token = models.CharField(max_length=128, unique=True)  # (reset) Hash único
-    created_at = models.DateTimeField(auto_now_add=True)  # (reset)
-    expires_at = models.DateTimeField()  # (reset) Fecha de expiración
-    used = models.BooleanField(default=False)  # (reset) Si ya fue utilizado
+    token = models.CharField(max_length=128, unique=True)  # Hash único
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()  # Fecha de expiración
+    used = models.BooleanField(default=False)  # Si ya fue utilizado
 
-    def save(self, *args, **kwargs):  # (reset)
-        """# (reset) Genera token y fecha de expiración automáticamente."""
-        if not self.token:  # (reset)
+    def save(self, *args, **kwargs):  # 
+        """Genera token y fecha de expiración automáticamente."""
+        if not self.token:  
             self.token = secrets.token_urlsafe(
                 48
-            )  # (reset) Token seguro de 64 chars aprox
-        if not self.expires_at:  # (reset)
+            )  # Token seguro de 64 chars aprox
+        if not self.expires_at:  
             self.expires_at = timezone.now() + timedelta(
                 hours=1
-            )  # (reset) Expira en 1 hora
-        super().save(*args, **kwargs)  # (reset)
+            )  # Expira en 1 hora
+        super().save(*args, **kwargs)
 
-    def is_valid(self):  # (reset)
-        """# (reset) Verifica si el token no ha expirado y no fue usado."""
-        return not self.used and timezone.now() < self.expires_at  # (reset)
+    def is_valid(self):
+        """Verifica si el token no ha expirado y no fue usado."""
+        return not self.used and timezone.now() < self.expires_at
 
-    def __str__(self):  # (reset)
-        return f"Reset token for {self.user.email} - {'valid' if self.is_valid() else 'expired/used'}"  # (reset)
+    def __str__(self):
+        return f"Reset token for {self.user.email} - {'valid' if self.is_valid() else 'expired/used'}"
